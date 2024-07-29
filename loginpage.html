@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <style>
+    body { padding: 20px; }
+    .container { width: 95%; max-width: 600px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>Login</h3>
+    <form id="loginForm">
+      <div class="input-field">
+        <input id="employeeId" type="text" name="employeeId" required>
+        <label for="employeeId">Employee ID</label>
+      </div>
+      <div class="input-field">
+        <input id="password" type="password" name="password" required>
+        <label for="password">Password</label>
+      </div>
+      <button type="submit" class="btn waves-effect waves-light">Login</button>
+    </form>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const employeeId = document.getElementById('employeeId').value;
+      const password = document.getElementById('password').value;
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            sessionStorage.setItem('employeeId', result.employeeId);
+            google.script.run.withSuccessHandler(function(baseUrl) {
+              if (result.isAdmin) {
+                window.top.location.href = baseUrl + '?page=admin';
+              } else {
+                window.top.location.href = baseUrl + '?page=employee';
+              }
+            }).getScriptUrl();
+          } else {
+            M.toast({html: 'Login failed. Please check your credentials.', classes: 'red'});
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Login error:', error);
+          M.toast({html: 'An error occurred. Please try again later.', classes: 'red'});
+        })
+        .loginEmployee(employeeId, password);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <style>
+    body { padding: 20px; }
+    .container { width: 95%; max-width: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Admin Dashboard</h2>
+    <ul class="tabs">
+      <li class="tab"><a href="#employeeManagement">Employee Management</a></li>
+      <li class="tab"><a href="#leaveManagement">Leave Management</a></li>
+    </ul>
+
+    <div id="employeeManagement" class="tab-content">
+      <div class="row">
+        <div class="col s4">
+          <h5>Employee List</h5>
+          <ul id="employeeList" class="employee-list"></ul>
+          <button id="addEmployeeBtn" class="btn waves-effect waves-light">Add Employee</button>
+        </div>
+        <div class="col s8">
+          <h5>Employee Information</h5>
+          <form id="employeeForm">
+            <div class="input-field">
+              <input id="employeeId" type="text" name="employeeId" readonly>
+              <label for="employeeId">Employee ID</label>
+            </div>
+            <div class="input-field">
+              <input id="name" type="text" name="name">
+              <label for="name">Name</label>
+            </div>
+            <div class="input-field">
+              <input id="age" type="number" name="age">
+              <label for="age">Age</label>
+            </div>
+            <div class="input-field">
+              <input id="email" type="email" name="email">
+              <label for="email">Email</label>
+            </div>
+            <div class="input-field">
+              <input id="phone" type="text" name="phone">
+              <label for="phone">Phone</label>
+            </div>
+            <button type="button" class="btn waves-effect waves-light" onclick="updateEmployee()">Update</button>
+            <button type="button" class="btn waves-effect waves-light red" onclick="deleteEmployee()">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="leaveManagement" class="tab-content">
+      <h5>Leave Applications</h5>
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="leaveApplications">
+          <!-- Leave applications will be inserted here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="expenseManagement" class="tab-content">
+  <h5>Expense Claims</h5>
+  <table>
+    <thead>
+      <tr>
+        <th>Employee</th>
+        <th>Date</th>
+        <th>Amount</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="expenseClaims">
+      <!-- Expense claims will be inserted here -->
+    </tbody>
+  </table>
+</div>
+
+
+  <!-- Add Employee Modal -->
+  <div id="addEmployeeModal" class="modal">
+    <div class="modal-content">
+      <h4>Add Employee</h4>
+      <form id="addEmployeeForm">
+        <div class="input-field">
+          <input id="addEmployeeName" type="text" name="name">
+          <label for="addEmployeeName">Name</label>
+        </div>
+        <div class="input-field">
+          <input id="addEmployeeAge" type="number" name="age">
+          <label for="addEmployeeAge">Age</label>
+        </div>
+        <div class="input-field">
+          <input id="addEmployeeEmail" type="email" name="email">
+          <label for="addEmployeeEmail">Email</label>
+        </div>
+        <div class="input-field">
+          <input id="addEmployeePhone" type="text" name="phone">
+          <label for="addEmployeePhone">Phone</label>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" onclick="submitAddForm()">Add Employee</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      M.Tabs.init(document.querySelectorAll('.tabs'));
+      M.Modal.init(document.querySelectorAll('.modal'));
+      M.Datepicker.init(document.querySelectorAll('.datepicker'), {
+        format: 'yyyy-mm-dd',
+        yearRange: [1930, new Date().getFullYear()]
+      });
+      M.FormSelect.init(document.querySelectorAll('select'));
+      
+      loadEmployees();
+      loadLeaveApplications();
+    });
+
+    function loadEmployees() {
+      google.script.run.withSuccessHandler(renderEmployeeList).getEmployees();
+    }
+
+  function renderEmployeeList(employees) {
+    const employeeList = document.getElementById('employeeList');
+    employeeList.innerHTML = '';
+    employees.forEach(function(employee) {
+      const li = document.createElement('li');
+      li.textContent = employee.name;
+      li.dataset.id = employee.id || employee.employeeId; // Use employeeId as fallback
+      li.addEventListener('click', function() {
+        selectEmployee({...employee, id: employee.id || employee.employeeId}); // Ensure id is set
+      });
+      employeeList.appendChild(li);
+    });
+  }
+
+function selectEmployee(employee) {
+    document.querySelectorAll('.employee-list li').forEach(function(li) {
+      li.classList.remove('active');
+    });
+    document.querySelector(`.employee-list li[data-id="${employee.id}"]`).classList.add('active');
+    const form = document.getElementById('employeeForm');
+    for (const key in employee) {
+      if (form[key]) {
+        form[key].value = employee[key];
+        // Force label to move up for filled fields
+        const label = form[key].nextElementSibling;
+        if (label && label.classList.contains('active') === false) {
+          label.classList.add('active');
+        }
+      }
+    }
+    // Ensure the employeeId field is populated and its label is active
+    const employeeIdField = form['employeeId'];
+    if (employeeIdField) {
+      employeeIdField.value = employee.id;
+      const label = employeeIdField.nextElementSibling;
+      if (label) {
+        label.classList.add('active');
+      }
+    }
+    // Update all text fields to ensure proper rendering
+    M.updateTextFields();
+  }
+
+    function updateEmployee() {
+      const form = document.getElementById('employeeForm');
+      const employee = {};
+      new FormData(form).forEach((value, key) => {
+        employee[key] = value;
+      });
+      google.script.run.withSuccessHandler(function() {
+        loadEmployees();
+        M.toast({html: 'Employee updated successfully', classes: 'green'});
+      }).updateEmployee(employee);
+    }
+
+    function deleteEmployee() {
+      const employeeId = document.getElementById('employeeId').value;
+      if (employeeId) {
+        google.script.run.withSuccessHandler(function() {
+          loadEmployees();
+          document.getElementById('employeeForm').reset();
+          M.toast({html: 'Employee deleted successfully', classes: 'red'});
+        }).deleteEmployee(employeeId);
+      }
+    }
+
+    function submitAddForm() {
+      const form = document.getElementById('addEmployeeForm');
+      const employee = {};
+      new FormData(form).forEach((value, key) => {
+        employee[key] = value;
+      });
+      google.script.run.withSuccessHandler(function() {
+        loadEmployees();
+        M.toast({html: 'Employee added successfully', classes: 'green'});
+        M.Modal.getInstance(document.getElementById('addEmployeeModal')).close();
+        form.reset();
+      }).addEmployee(employee);
+    }
+
+    function loadLeaveApplications() {
+      google.script.run.withSuccessHandler(renderLeaveApplications).getLeaveApplications();
+    }
+
+    function renderLeaveApplications(applications) {
+      const tbody = document.getElementById('leaveApplications');
+      tbody.innerHTML = '';
+      applications.forEach(function(application) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${application.employeeId}</td>
+          <td>${application.startDate}</td>
+          <td>${application.endDate}</td>
+          <td>${application.reason}</td>
+          <td>${application.status}</td>
+          <td>
+            <button class="btn small blue" onclick="approveLeave('${application.id}')">Approve</button>
+            <button class="btn small red" onclick="rejectLeave('${application.id}')">Reject</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function approveLeave(leaveId) {
+      google.script.run.withSuccessHandler(function() {
+        loadLeaveApplications();
+        M.toast({html: 'Leave approved successfully', classes: 'green'});
+      }).updateLeaveStatus(leaveId, 'Approved');
+    }
+
+    function rejectLeave(leaveId) {
+      google.script.run.withSuccessHandler(function() {
+        loadLeaveApplications();
+        M.toast({html: 'Leave rejected successfully', classes: 'red'});
+      }).updateLeaveStatus(leaveId, 'Rejected');
+    }
+
+    function loadExpenseClaims() {
+  google.script.run.withSuccessHandler(renderExpenseClaims).getExpenseClaims();
+}
+
+function renderExpenseClaims(claims) {
+  const tbody = document.getElementById('expenseClaims');
+  tbody.innerHTML = '';
+  claims.forEach(claim => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${claim.employeeId}</td>
+      <td>${claim.date}</td>
+      <td>${claim.amount}</td>
+      <td>${claim.description}</td>
+      <td>${claim.status}</td>
+      <td>
+        <button class="btn small blue" onclick="approveExpense(${claim.id})">Approve</button>
+        <button class="btn small red" onclick="rejectExpense(${claim.id})">Reject</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function approveExpense(claimId) {
+  google.script.run.withSuccessHandler(function() {
+    loadExpenseClaims();
+    M.toast({html: 'Expense claim approved successfully', classes: 'green'});
+  }).updateExpenseStatus(claimId, 'Approved');
+}
+
+function rejectExpense(claimId) {
+  google.script.run.withSuccessHandler(function() {
+    loadExpenseClaims();
+    M.toast({html: 'Expense claim rejected successfully', classes: 'red'});
+  }).updateExpenseStatus(claimId, 'Rejected');
+}
+
+  </script>
+</body>
+</html>

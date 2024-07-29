@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Page</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" rel="stylesheet">
+  <style>
+    .container {
+      margin-top: 50px;
+    }
+    .fc-late {
+      background-color: red;
+      color: white;
+    }
+    .fc-early {
+      background-color: yellow;
+      color: black;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <ul id="tabs-swipe-demo" class="tabs">
+      <li class="tab col s3"><a class="active" href="#profile">Profile</a></li>
+      <li class="tab col s3"><a href="#attendance">Attendance</a></li>
+      <li class="tab col s3"><a href="#leave">Apply Leave</a></li>
+      <li class="tab col s3"><a href="#expenses">Expense</a></li>
+      <li class="tab col s3"><a href="#dashboard">Dashboard</a></li>
+    </ul>
+    
+    <div id="profile" class="col s12">
+      <form id="employeeDetailsForm">
+        <h5>Employee Details</h5>
+        <div class="input-field">
+          <input id="employeeId" type="text" name="employeeId" disabled>
+          <label for="employeeId">Employee ID</label>
+        </div>
+        <div class="input-field">
+          <input id="employeeName" type="text" name="name">
+          <label for="employeeName">Name</label>
+        </div>
+        <div class="input-field">
+          <input id="employeeAge" type="text" name="age">
+          <label for="employeeAge">Age</label>
+        </div>
+        <div class="input-field">
+          <input id="employeeEmail" type="email" name="email">
+          <label for="employeeEmail">Email</label>
+        </div>
+        <div class="input-field">
+          <input id="employeePhone" type="text" name="phone">
+          <label for="employeePhone">Phone</label>
+        </div>
+      </form>
+    </div>
+    
+    <div id="attendance" class="col s12">
+      <h5>Attendance</h5>
+      <button class="btn" onclick="checkIn()">Check In</button>
+      <button class="btn" onclick="checkOut()">Check Out</button>
+      <div id="calendar" class="calendar"></div>
+    </div>
+    
+    <div id="leave" class="col s12">
+      <h5>Apply Leave</h5>
+      <form id="leaveApplicationForm">
+        <div class="input-field">
+          <input id="leaveStartDate" type="text" class="datepicker" name="startDate">
+          <label for="leaveStartDate">Start Date</label>
+        </div>
+        <div class="input-field">
+          <input id="leaveEndDate" type="text" class="datepicker" name="endDate">
+          <label for="leaveEndDate">End Date</label>
+        </div>
+        <div class="input-field">
+          <textarea id="leaveReason" class="materialize-textarea" name="reason"></textarea>
+          <label for="leaveReason">Reason</label>
+        </div>
+        <button type="button" class="btn" onclick="applyLeave()">Apply</button>
+      </form>
+      <ul id="leaveApplicationsList" class="collection"></ul>
+    </div>
+    
+    <!-- Expense Claims Tab -->
+    <div id="expenses" class="col s12">
+    <h5>Submit Expense Claim</h5>
+      <form id="expenseForm">
+        <div class="input-field">
+          <input type="text" id="expenseDate" class="datepicker">
+          <label for="expenseDate">Date</label>
+        </div>
+        <div class="input-field">
+          <input type="number" id="expenseAmount">
+          <label for="expenseAmount">Amount</label>
+        </div>
+        <div class="input-field">
+          <input type="text" id="expenseDescription">
+          <label for="expenseDescription">Description</label>
+        </div>
+        <div class="input-field">
+          <select id="expenseType">
+            <option value="" disabled selected>Choose expense type</option>
+            <option value="Travel">Travel</option>
+            <option value="Meals">Meals</option>
+            <option value="Supplies">Supplies</option>
+            <option value="Other">Other</option>
+          </select>
+          <label for="expenseType">Expense Type</label>
+        </div>
+        <div class="file-field input-field">
+          <div class="btn">
+            <span>File</span>
+            <input type="file" id="receiptFile">
+          </div>
+          <div class="file-path-wrapper">
+            <input class="file-path validate" type="text">
+          </div>
+        </div>
+        <button type="button" class="btn" onclick="submitExpense()">Submit</button>
+      </form>
+
+      <h4>My Expense Claims</h4>
+      <ul id="expenseClaimsList" class="collection"></ul>
+    </div>
+  </div>
+    
+    <div id="dashboard" class="col s12">
+      <h5>Dashboard</h5>
+      <ul id="dashboardStats" class="collection">
+        <li class="collection-item">Total Working Days: <span id="totalWorkingDays"></span></li>
+        <li class="collection-item">Total Days Late: <span id="totalDaysLate"></span></li>
+        <li class="collection-item">Total Days Early Check Out: <span id="totalDaysEarly"></span></li>
+      </ul>
+    </div>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      M.Tabs.init(document.querySelectorAll('.tabs'));
+      M.Datepicker.init(document.querySelectorAll('.datepicker'), {
+        format: 'mm/dd/yyyy',
+        yearRange: [1930, new Date().getFullYear()],
+        autoClose: true,
+        setDefaultDate: true,
+        defaultDate: new Date()
+      });
+      M.FormSelect.init(document.querySelectorAll('select')); // Initialize select elements
+
+
+      // Retrieve employee ID from session storage
+      const employeeId = sessionStorage.getItem('employeeId');
+      if (employeeId) {
+        loadEmployeeDetails(employeeId);
+      } else {
+        // Redirect to login page if employee ID is not available
+        google.script.run.withSuccessHandler(function(baseUrl) {
+          window.top.location.href = baseUrl + '?page=login';
+        }).getScriptUrl();
+      }
+      
+      loadAttendanceRecords(employeeId);
+      loadLeaveApplications(employeeId);
+      loadDashboardStats(employeeId);
+    });
+
+    function loadEmployeeDetails(employeeId) {
+      google.script.run.withSuccessHandler(renderEmployeeDetails).getEmployeeDetails(employeeId);
+    }
+
+    function renderEmployeeDetails(details) {
+      const form = document.getElementById('employeeDetailsForm');
+      for (const key in details) {
+        if (form[key]) {
+          form[key].value = details[key];
+          M.updateTextFields();
+        }
+      }
+    }
+
+    function checkIn() {
+      const employeeId = sessionStorage.getItem('employeeId');
+      const allowedLat = 2.0634148873870584; //
+      const allowedLng = 102.59822699969861; // 
+      const allowedRadius = 1; // 1 km radius
+      getLocation()
+        .then(position => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          const distance = calculateDistance(latitude, longitude, allowedLat, allowedLng);
+          
+          if (distance <= allowedRadius) {
+            google.script.run.withSuccessHandler(() => {
+              M.toast({html: 'Check-In Successful', classes: 'green'});
+              loadAttendanceRecords(employeeId);
+            }).withFailureHandler(error => {
+              M.toast({html: error.message, classes: 'red'});
+            }).checkIn(employeeId, latitude, longitude);
+          } else {
+            M.toast({html: 'You are not within the allowed check-in location.', classes: 'red'});
+          }
+        })
+        .catch(error => {
+          M.toast({html: 'Error getting location: ' + error.message, classes: 'red'});
+        });
+    }
+
+    function checkOut() {
+      const allowedLat = 2.0634148873870584; //
+      const allowedLng = 102.59822699969861; // 
+      const allowedRadius = 1; // 1 km radius
+      const employeeId = sessionStorage.getItem('employeeId');
+      getLocation()
+        .then(position => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          const distance = calculateDistance(latitude, longitude, allowedLat, allowedLng);
+
+          if (distance <= allowedRadius) {
+            const checkOutTime = new Date();
+            const earlyTime = new Date();
+            earlyTime.setHours(17, 0, 0); // 5:00 PM
+
+            const isEarlyLeave = checkOutTime < earlyTime ? 'Yes' : 'No';
+
+            google.script.run.withSuccessHandler(() => {
+              M.toast({html: 'Check-Out Successful', classes: 'green'});
+              loadAttendanceRecords(employeeId);
+            }).withFailureHandler(error => {
+              M.toast({html: error.message, classes: 'red'});
+            }).checkOut(employeeId, latitude, longitude, isEarlyLeave);
+          } else {
+            M.toast({html: 'You are not within the allowed check-out location.', classes: 'red'});
+          }
+        })
+        .catch(error => {
+          M.toast({html: 'Error getting location: ' + error.message, classes: 'red'});
+        });
+    }
+
+    function getLocation() {
+      return new Promise((resolve, reject) => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        } else {
+          reject(new Error('Geolocation is not supported by this browser.'));
+        }
+      });
+    }
+
+    function loadAttendanceRecords(employeeId) {
+  google.script.run.withSuccessHandler(function(records) {
+    console.log("Records fetched:", records); // Add this line to debug
+    renderCalendar(records);
+  }).getAttendanceRecords(employeeId);
+}
+
+
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371; // Radius of the Earth in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; // Distance in km
+    }
+
+function renderCalendar(records) {
+  // Debugging statement to log the received records
+  console.log("Records received:", records);
+
+  // Check if records is null or undefined
+  if (!records) {
+    console.error("No records found or records is null/undefined!");
+    return;
+  }
+
+  // Ensure records is an array
+  if (!Array.isArray(records)) {
+    console.error("Records is not an array:", records);
+    return;
+  }
+
+  const calendarEl = document.getElementById('calendar');
+  
+  // Debugging statement to check if the calendar element is found
+  if (!calendarEl) {
+    console.error("Calendar element not found!");
+    return;
+  }
+
+  const events = records.map(record => {
+    // Debugging statement to check each record
+    console.log("Processing record:", record);
+
+    const checkInEvent = {
+      title: record.late === true ? 'Late Check-In' : 'On Time',
+      start: moment(record.date).format('YYYY-MM-DD'),
+      className: record.late === true ? 'fc-late' : ''
+    };
+
+    const checkOutEvent = {
+      title: record.earlyLeave === true ? 'Early Check-Out' : 'On Time',
+      start: moment(record.checkOutDate).format('YYYY-MM-DD'),
+      className: record.earlyLeave === true ? 'fc-early' : ''
+    };
+
+    return [checkInEvent, checkOutEvent];
+  }).flat();
+
+  // Debugging statement to log the events
+  console.log("Events generated:", events);
+
+  // Destroy the existing calendar instance if it exists
+  if ($(calendarEl).hasClass('fc')) {
+    $(calendarEl).fullCalendar('destroy');
+  }
+
+  // Initialize the FullCalendar
+  $(calendarEl).fullCalendar({
+    header: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'month,agendaWeek,agendaDay'
+    },
+    events: events
+  });
+}
+
+function loadAttendanceRecords(employeeId) {
+  google.script.run.withSuccessHandler(function(records) {
+    console.log("Records fetched:", records); // Add this line to debug
+    renderCalendar(records);
+  }).getAttendanceRecords(employeeId);
+}
+
+
+
+    function applyLeave() {
+      const employeeId = sessionStorage.getItem('employeeId');
+      const form = document.getElementById('leaveApplicationForm');
+      const leaveData = {
+        employeeId: employeeId,
+        startDate: form.startDate.value,
+        endDate: form.endDate.value,
+        reason: form.reason.value
+      };
+
+      google.script.run.withSuccessHandler(() => {
+        M.toast({html: 'Leave Applied Successfully', classes: 'green'});
+        loadLeaveApplications(employeeId);
+        form.reset(); // Reset the form after successful submission
+      }).withFailureHandler(error => {
+        M.toast({html: error.message, classes: 'red'});
+      }).applyLeave(leaveData);
+    }
+
+    function loadLeaveApplications(employeeId) {
+      google.script.run.withSuccessHandler(renderLeaveApplications).getLeaveApplications(employeeId);
+    }
+
+    function renderLeaveApplications(applications) {
+      const leaveApplicationsList = document.getElementById('leaveApplicationsList');
+      leaveApplicationsList.innerHTML = '';
+      applications.forEach(application => {
+        const li = document.createElement('li');
+        li.className = 'collection-item';
+        li.textContent = `Start Date: ${application.startDate}, End Date: ${application.endDate}, Reason: ${application.reason}, Status: ${application.status}`;
+        leaveApplicationsList.appendChild(li);
+      });
+    }
+
+    function loadDashboardStats(employeeId) {
+      google.script.run.withSuccessHandler(renderDashboardStats).getDashboardStats(employeeId);
+    }
+
+    function renderDashboardStats(stats) {
+      document.getElementById('totalWorkingDays').innerText = stats.totalWorkingDays;
+      document.getElementById('totalDaysLate').innerText = stats.totalDaysLate;
+      document.getElementById('totalDaysEarly').innerText = stats.totalDaysEarly;
+    }
+
+    function submitExpense() {
+      const form = document.getElementById('expenseForm');
+      const expenseDate = form.querySelector('#expenseDate').value;
+      const expenseAmount = form.querySelector('#expenseAmount').value;
+      const expenseDescription = form.querySelector('#expenseDescription').value;
+      const expenseType = form.querySelector('#expenseType').value;
+      const receiptFile = form.querySelector('#receiptFile').files[0];
+      const employeeId = sessionStorage.getItem('employeeId');
+
+      if (!expenseDate || !expenseAmount || !expenseDescription || !expenseType || !receiptFile) {
+        M.toast({html: 'Please fill in all fields and attach a receipt.', classes: 'red'});
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const fileData = event.target.result.split(',')[1];
+        const expenseData = {
+          date: expenseDate,
+          amount: expenseAmount,
+          description: expenseDescription,
+          type: expenseType,
+          employeeId: employeeId,
+          receipt: fileData,
+          mimeType: receiptFile.type,
+          filename: receiptFile.name
+        };
+
+        google.script.run.withSuccessHandler(() => {
+          M.toast({html: 'Expense Claim Submitted', classes: 'green'});
+          loadExpenseClaims(employeeId);
+        }).withFailureHandler(error => {
+          M.toast({html: error.message, classes: 'red'});
+        }).submitExpense(expenseData);
+      };
+      reader.readAsDataURL(receiptFile);
+    }
+
+    function loadExpenseClaims() {
+      google.script.run.withSuccessHandler(renderExpenseClaims).getExpenseClaims();
+    }
+
+    function renderExpenseClaims(claims) {
+      const list = document.getElementById('expenseClaimsList');
+      list.innerHTML = '';
+      claims.forEach(claim => {
+        const li = document.createElement('li');
+        li.className = 'collection-item';
+        li.innerHTML = `
+          <div>
+            <span>${claim.date} - ${claim.amount} - ${claim.type}</span>
+            <a href="${claim.fileUrl}" target="_blank" class="secondary-content"><i class="material-icons">attachment</i></a>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+  </script>
+</body>
+</html>
